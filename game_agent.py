@@ -43,15 +43,7 @@ def custom_score(game, player):
     own_moves = len(game.get_legal_moves(player))
     opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
 
-    # increase aggression as game nears end
-    aggression_coeff = 1.
-    percent_over = float(len(game.get_blank_spaces())) / (game.width * game.height)
-    if percent_over <= .50:
-        aggression_coeff = 1.5
-    elif percent_over <= .25:
-        aggression_coeff = 2
-
-    return own_moves - (aggression_coeff * opp_moves)
+    return float(own_moves) - opp_moves
 
 
 def custom_score_2(game, player):
@@ -76,8 +68,24 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    if game.is_loser(player):
+        return float('-inf')
+
+    if game.is_winner(player):
+        return float('inf')
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+
+    # increase aggression as game nears end
+    aggression_coeff = 1.
+    percent_over = float(len(game.get_blank_spaces())) / (game.width * game.height)
+    if percent_over <= .50:
+        aggression_coeff = 1.5
+    elif percent_over <= .25:
+        aggression_coeff = 2
+
+    return own_moves - (aggression_coeff * opp_moves)
 
 
 def custom_score_3(game, player):
@@ -102,8 +110,18 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    if game.is_loser(player):
+        return float('-inf')
+
+    if game.is_winner(player):
+        return float('inf')
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    
+    width, height = game.width / 2.0, game.height / 2.0
+    current_y, current_x = game.get_player_location(player)
+    return float((height-current_y)**2 + (width-current_x)**2 - opp_moves)
 
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never
@@ -299,8 +317,31 @@ class AlphaBetaPlayer(IsolationPlayer):
         """
         self.time_left = time_left
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        no_moves_left_position = (-1, -1)
+
+        # initialize with a move in case of timer timeout
+        legal_moves = game.get_legal_moves(self)
+
+        if not legal_moves:
+            return (-1, -1)
+
+        best_move = legal_moves[0]
+
+        try:
+            # search till end game, otherwise try-catch will catch exception
+            # when time runs out
+            moves_remaining = game.height * game.width - game.move_count
+
+            for depth in range(1, moves_remaining):
+                self.search_depth = depth
+                best_move = self.alphabeta(game, depth)
+
+                # forfeit if no more moves available
+                assert best_move != no_moves_left_position
+        except SearchTimeout:
+            pass
+
+        return best_move
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
         """Implement depth-limited minimax search with alpha-beta pruning as
@@ -351,11 +392,13 @@ class AlphaBetaPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
+        no_moves_left_position = (-1, -1)
 
         legal_moves = game.get_legal_moves()
+
         if not legal_moves:
             # THE END
-            return (-1,-1)
+            return no_moves_left_position
 
         score = float('-inf')
         move = None
@@ -417,7 +460,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         for move in legal_moves:
             score = min(score, self.__max(game.forecast_move(move), depth - 1, alpha, beta))
 
-            if score <= beta:
+            if score <= alpha:
                 return score
 
             beta = min(beta, score)
