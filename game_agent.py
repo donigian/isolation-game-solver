@@ -277,7 +277,7 @@ class MinimaxPlayer(IsolationPlayer):
             return self.score(game, self)
 
         return min(self._max(game.forecast_move(legal_moves), depth - 1) for legal_moves in legal_moves)    
-       
+
 
 class AlphaBetaPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using iterative deepening minimax
